@@ -2,15 +2,18 @@
 
 namespace App\Console\Commands;
 
+use App\Models\ProductCurrency;
+use App\Models\Products;
+use App\Models\ProductStatus;
 use Illuminate\Console\Command;
-use PDO;
+use App\Rules\ProductValidator;
 
 class ImportProducts extends Command
 {
     /**
      * @var string
      */
-    protected $signature = 'import:products';
+    protected $signature = 'import:products {file : The CSV file to import}';
 
     /**
      * @var string
@@ -18,11 +21,22 @@ class ImportProducts extends Command
     protected $description = 'Imports products into database';
 
     /**
+     * The ProductValidator instance.
+     *
+     * @var ProductValidator
+     */
+    protected $validator;
+
+    /**
+     * Create a new command instance.
+     *
+     * @param ProductValidator $validator
      * @return void
      */
-    public function __construct()
+    public function __construct(ProductValidator $validator)
     {
         parent::__construct();
+        $this->validator = $validator;
     }
 
     /**
@@ -30,33 +44,87 @@ class ImportProducts extends Command
      */
     public function handle()
     {
-        // Rename from products1.csv into products2.csv to import a file with slightly different data
-        $contents = file_get_contents('products.csv');
+        // Get the file as an input 
+        $file = $this->argument('file');
+
+        // Validate the file
+        if (!file_exists($file)) {
+            $this->error("File not found: {$file}");
+            return;
+        }
+
+        $startTime = microtime(true);
+        $contents = file_get_contents($file);
         $lines = explode("\n", $contents);
 
         $i = 0;
 
         foreach ($lines as $line) {
 
-            $fields = explode(';', $line);
-
-            $pdo = new PDO('mysql:dbname=coding_challenge;host=172.0.0.1;port=3306', 'root', 'secret');
-
-            $query = $pdo->prepare("SELECT COUNT(*) AS c from products WHERE id=?");
-            $result = $query->execute([$fields[0]]);
-            if($query->rowCount()) {
-                $pdo->query('DELETE FROM products WHERE id = "' . $fields[0] . '"');
-                print('Deleted existed product to be updated.');
+            if ($i % 1000 == 0) {
+                print("Processing... Processed {$i} products \n");
             }
 
-            $query = $pdo->prepare('INSERT INTO products (id, name, sku,status,variations, price, currency) VALUES (?, ?, ?, ? , ? , ?, ?)');
-            $result = $query->execute([$fields[0], ($fields[4] ?? ''), ($fields[5] ?? ''), ($fields[6] ?? ''), ($fields[9] ?? ''), ($fields[10] ?? '') ]);
+            // Skip the header row
+            if ($i == 0) {
+                $i++;
+                continue;
+            }
 
-            // TODO: Soft delete no longer exist products from the database.
+            $fields = explode(",", $line);
+
+            // Ensure the array has the expected number of elements
+            if (count($fields) < 8) {
+                print("Insufficient columns in CSV line: {$i} \n");
+                $i++;
+                continue;
+
+                // We can also throw an exception in this scenario and ask the user to fix the csv first
+                // throw new Exception("Insufficient columns in CSV line: {$i}");
+            }
+
+            $data = [
+                'id' => $fields[0],
+                'name' => $fields[1],
+                'sku' => $fields[2],
+                'price' => $fields[3],
+                'currency' => $fields[4],
+                'variations' => $fields[5],
+                'quantity' => $fields[6],
+                'status' => $fields[7],
+            ];
+
+            $data = $this->validator->validate($data);
+
+            // SKU is unique so if it exists already set it to null and incomplete_import
+            if ($data['sku'] && Products::where('sku', $data['sku'])->first()) {
+                $data['sku'] = null;
+                $data['incomplete_import'] = true;
+            }
+
+            $currency = $data['currency'] ? ProductCurrency::updateOrCreate(['currency' => $data['currency']], ['currency' => $data['currency']]) : null;
+            $status = $data['status'] ? ProductStatus::updateOrCreate(['status' => $data['status']], ['status' => $data['status']]) : null;
+
+            Products::updateOrCreate(['id' => $data['id']],  [
+                'name' => $data['name'],
+                'sku' => $data['sku'],
+                'price' => $data['price'],
+                'product_currency_id' => $currency->id,
+                'variations' => $data['variations'],
+                'quantity' => $data['quantity'],
+                'product_status_id' => $status->id,
+                'incomplete_import' => $data['incomplete_import'] ?? false
+            ]);
 
             $i++;
         }
 
-        die('Updated ' . $i . ' products.');
+        $endTime = microtime(true);
+        $executionTime = $endTime - $startTime;
+        $formattedTime = gmdate('H:i:s', (int)$executionTime);
+
+        print("Execution Time: {$formattedTime} \n");
+
+        die("Updated {$i} products.\n");
     }
 }
