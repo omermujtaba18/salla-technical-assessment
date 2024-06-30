@@ -16,7 +16,7 @@ class Products extends Model
      *
      * @var array
      */
-    protected $fillable = ['id', 'name', 'sku', 'product_status_id', 'variations', 'price', 'product_currency_id', 'incomplete_import', 'deletion_reason'];
+    protected $fillable = ['id', 'name', 'sku', 'product_status_id', 'quantity', 'variations', 'price', 'product_currency_id', 'incomplete_import', 'deletion_reason'];
 
     protected $dates = ['deleted_at'];
 }
