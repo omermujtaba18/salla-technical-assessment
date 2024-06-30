@@ -102,10 +102,12 @@ class ImportProducts extends Command
                 $data['incomplete_import'] = true;
             }
 
-            $currency = $data['currency'] ? ProductCurrency::updateOrCreate(['currency' => $data['currency']], ['currency' => $data['currency']]) : null;
-            $status = $data['status'] ? ProductStatus::updateOrCreate(['status' => $data['status']], ['status' => $data['status']]) : null;
+            $currency = $data['currency'] ? ProductCurrency::firstOrCreate(['currency' => $data['currency']], ['currency' => $data['currency']]) : null;
+            $status = $data['status'] ? ProductStatus::firstOrCreate(['status' => $data['status']], ['status' => $data['status']]) : null;
 
-            Products::updateOrCreate(['id' => $data['id']],  [
+            $isProductDeleted = $data['status'] === 'deleted';
+
+            $product = Products::withTrashed()->updateOrCreate(['id' => $data['id']],  [
                 'name' => $data['name'],
                 'sku' => $data['sku'],
                 'price' => $data['price'],
@@ -113,11 +115,19 @@ class ImportProducts extends Command
                 'variations' => $data['variations'],
                 'quantity' => $data['quantity'],
                 'product_status_id' => $status->id,
-                'incomplete_import' => $data['incomplete_import'] ?? false
+                'incomplete_import' => $data['incomplete_import'] ?? false,
+                'deletion_reason' => $isProductDeleted ? 'synchronization' : null
             ]);
+
+            $isProductDeleted ? $product->delete() : $product->restore();
 
             $i++;
         }
+
+        $startDateTime = (new \DateTime())->setTimestamp($startTime);
+
+        // Delete products that are not in the current file run
+        Products::where('updated_at', '<', $startDateTime)->update(['deletion_reason' => 'synchronization', 'deleted_at' => now()->toDateTimeString()]);
 
         $endTime = microtime(true);
         $executionTime = $endTime - $startTime;
