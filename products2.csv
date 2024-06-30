@@ -1,0 +1,8 @@
+id,name,sku,price,currency,variations,quantity,status
+61,أقراط الياقوت,,1500,SAR,,92,sale
+62,خاتم الزمرد,,NULL,SAR,,NULL,hidden
+63,حذاء دولتشي & قابانا,,290,SAR,,95,deleted
+64,حذاء كريستيان لوبوتان,,300,SAR,,82,deleted
+65,حذاء رالف & روسو,,540,SAR,,96,sale
+70,حقيبة يد إيف سان لوران,,304,SAR,,97,sale
+71,حقيبة يد فندي,,1200,SAR,,97,sale
