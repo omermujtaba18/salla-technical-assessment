@@ -13,7 +13,7 @@ class ImportProducts extends Command
     /**
      * @var string
      */
-    protected $signature = 'import:products {file : The CSV file to import}';
+    protected $signature = 'import:products {file : The CSV file to import} {maxRowsToProcess : The maximum number of rows to process}';
 
     /**
      * @var string
@@ -47,6 +47,9 @@ class ImportProducts extends Command
         // Get the file as an input 
         $file = $this->argument('file');
 
+        // Added maxRowsToProcess to assist in testing
+        $maxRowsToProcess = (int)$this->argument('maxRowsToProcess');
+
         // Validate the file
         if (!file_exists($file)) {
             $this->error("File not found: {$file}");
@@ -72,6 +75,7 @@ class ImportProducts extends Command
             }
 
             $fields = explode(",", $line);
+            $fields = str_getcsv($line);
 
             // Ensure the array has the expected number of elements
             if (count($fields) < 8) {
@@ -97,7 +101,7 @@ class ImportProducts extends Command
             $data = $this->validator->validate($data);
 
             // SKU is unique so if it exists already set it to null and incomplete_import
-            if ($data['sku'] && Products::where('sku', $data['sku'])->first()) {
+            if ($data['sku'] && Products::withTrashed()->where('sku', $data['sku'])->first()) {
                 $data['sku'] = null;
                 $data['incomplete_import'] = true;
             }
@@ -111,15 +115,45 @@ class ImportProducts extends Command
                 'name' => $data['name'],
                 'sku' => $data['sku'],
                 'price' => $data['price'],
-                'product_currency_id' => $currency->id,
-                'variations' => $data['variations'],
+                'product_currency_id' => $currency ? $currency->id : null,
                 'quantity' => $data['quantity'],
-                'product_status_id' => $status->id,
+                'product_status_id' => $status ? $status->id : null,
                 'incomplete_import' => $data['incomplete_import'] ?? false,
                 'deletion_reason' => $isProductDeleted ? 'synchronization' : null
             ]);
 
             $isProductDeleted ? $product->delete() : $product->restore();
+
+            if (isset($data['variations'])) {
+                $decodedVariations = json_decode("{$data['variations']}", true);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    // Mark the product as incomplete_product since variations are invalid
+                    $product->incomplete_import = true;
+                    $product->save();
+                } else {
+                    $product->variations()->delete();
+
+                    foreach ($decodedVariations as $variation) {
+                        $isColor = $variation['name'] === 'color' || $variation['name'] === 'الحجم';
+                        $isSize = $variation['name'] === 'size' || $variation['name'] === 'مقاس';
+                        $values = array_filter(array_map('trim', explode(",", $variation['value'])));
+
+                        if ($isColor || $isSize) {
+                            foreach ($values as $value) {
+                                $productVariation = [
+                                    'color' => $isColor ? $value : null,
+                                    'size' => $isSize ? $value : null,
+                                ];
+                                $product->variations()->create($productVariation);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (isset($maxRowsToProcess) && $i === $maxRowsToProcess) {
+                break;
+            }
 
             $i++;
         }
