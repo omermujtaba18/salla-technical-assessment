@@ -13,7 +13,7 @@ class ImportProducts extends Command
     /**
      * @var string
      */
-    protected $signature = 'import:products {file : The CSV file to import} {maxRowsToProcess : The maximum number of rows to process}';
+    protected $signature = 'import:products {file : The CSV file to import} {--maxRowsToProcess= : The maximum number of rows to process } {--parallelizationEnabled=true : Whether to process parallel}';
 
     /**
      * @var string
@@ -48,7 +48,8 @@ class ImportProducts extends Command
         $file = $this->argument('file');
 
         // Added maxRowsToProcess to assist in testing
-        $maxRowsToProcess = (int)$this->argument('maxRowsToProcess');
+        $maxRowsToProcess = (int)$this->option('maxRowsToProcess');
+        $parallelizationEnabled = $this->option('parallelizationEnabled');
 
         // Validate the file
         if (!file_exists($file)) {
