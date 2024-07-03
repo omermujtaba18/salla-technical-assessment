@@ -9,13 +9,13 @@ class ProductVariations extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['id', 'color', 'size', 'quantity', 'availability', 'product_id'];
+    protected $fillable = ['id', 'quantity', 'availability', 'product_variation_name', 'product_variation_type_id'];
 
     /**
-     * Get the product that owns the variation.
+     * Get the variation_type that owns the variation.
      */
-    public function product()
+    public function variation_type()
     {
-        return $this->belongsTo(Products::class);
+        return $this->belongsTo(ProductVariationsTypes::class);
     }
 }
