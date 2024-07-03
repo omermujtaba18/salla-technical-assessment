@@ -9,7 +9,7 @@ class ProductVariations extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['id', 'quantity', 'availability', 'product_variation_name', 'product_variation_type_id'];
+    protected $fillable = ['id', 'quantity', 'availability', 'product_variation_name', 'product_variation_type_id', 'additional_price'];
 
     /**
      * Get the variation_type that owns the variation.
