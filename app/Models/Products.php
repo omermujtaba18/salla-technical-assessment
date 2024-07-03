@@ -24,8 +24,8 @@ class Products extends Model
     /**
      * Get the variations for the product.
      */
-    public function variations(): HasMany
+    public function variation_types(): HasMany
     {
-        return $this->hasMany(ProductVariations::class, 'product_id');
+        return $this->hasMany(ProductVariationsTypes::class, 'product_id');
     }
 }
