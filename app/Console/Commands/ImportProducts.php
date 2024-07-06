@@ -54,7 +54,7 @@ class ImportProducts extends Command
             $executionTime = $batch->finishedAt->diff($batch->createdAt)->format('%H:%I:%S');
             Log::info("CSV import successful. Execution time: {$executionTime}", ['totalJobs' => $batch->totalJobs]);
         })->catch(function (Batch $batch, Throwable $e) {
-            // Log::error('CSV import failed', ['error' => $e, 'batch' => $batch, 'totalJobs' => $batch->totalJobs, 'failedJobs' => $batch->failedJobs]);
+            Log::error('CSV import failed', ['error' => $e, 'batch' => $batch, 'totalJobs' => $batch->totalJobs, 'failedJobs' => $batch->failedJobs]);
         })->name('import:products:batch')->dispatch();
     }
 }
