@@ -27,16 +27,16 @@ class SyncProducts extends Command
      */
     public function handle()
     {
-        $service = $this->argument('service');
+        $serviceName = $this->argument('service');
 
         try {
-            $service = ServiceFactory::create($service);
+            $service = ServiceFactory::create($serviceName);
             $service->syncProducts();
 
-            Log::info("Products synced successfully from {$service->getName()}");
+            Log::info("Products synced successfully from {$serviceName}");
         } catch (\Exception $e) {
             // We can setup alerts/monitoring on these logs to get notified if something is wrong
-            Log::error("Products failed to sync from {$service->getName()}", ['service' => $service->getName(), 'message' => $e->getMessage(), 'stack' => $e->getTrace()]);
+            Log::error("Products failed to sync from {$serviceName}", ['service' => $serviceName, 'message' => $e->getMessage(), 'stack' => $e->getTrace()]);
         }
     }
 }
