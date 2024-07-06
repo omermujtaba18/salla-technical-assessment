@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('status');
             $table->enum('state', ['active', 'inactive'])->default('active');
+            $table->foreignId('product_id')->constrained('products', 'id')->onDelete('cascade');
             $table->timestamps();
         });
     }
