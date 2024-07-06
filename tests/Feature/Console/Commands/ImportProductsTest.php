@@ -15,24 +15,15 @@ use Throwable;
 
 class ImportProductsTest extends TestCase
 {
-    /**
-     * Test the command when the file does not exist.
-     *
-     * @return void
-     */
-    public function testFileNotFound()
+
+    public function test_it_cannot_find_file()
     {
         $this->artisan('import:products', ['file' => 'non_existing_file.csv'])
             ->expectsOutput('File not found: non_existing_file.csv')
             ->assertExitCode(0);
     }
 
-    /**
-     * Test the command when the file exists and batch process is successful.
-     *
-     * @return void
-     */
-    public function testBatchProcessSuccessful()
+    public function test_it_import_products_successfully()
     {
         Queue::fake();
         Bus::fake();
@@ -62,12 +53,7 @@ class ImportProductsTest extends TestCase
         $this->assertDatabaseMissing('products', ['id' => 1000, 'deletion_reason' => 'synchronization']);
     }
 
-    /**
-     * Test the command when the batch process fails.
-     *
-     * @return void
-     */
-    public function testBatchProcessFails()
+    public function test_it_fails_to_import_products_successfully()
     {
         Queue::fake();
         Bus::fake();
