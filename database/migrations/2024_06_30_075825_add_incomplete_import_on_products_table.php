@@ -13,7 +13,6 @@ return new class extends Migration
     {
         Schema::table('products', function (Blueprint $table) {
             $table->boolean('incomplete_import')->default(false);
-            $table->bigIncrements('id')->change();
         });
     }
 
@@ -24,7 +23,6 @@ return new class extends Migration
     {
         Schema::table('products', function (Blueprint $table) {
             $table->dropColumn('incomplete_import');
-            $table->increments('id')->change();
         });
     }
 };
