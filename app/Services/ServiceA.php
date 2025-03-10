@@ -15,8 +15,6 @@ class ServiceA implements ServiceInterface
     public function syncProducts(): void
     {
         $response = Http::baseUrl($this->baseUrl)->withHeaders($this->headers)->get('/products');
-        $response->throw();
-
         if ($response->successful()) {
             $products = $response->json();
             $productIds = collect($products)->pluck('id')->toArray();
