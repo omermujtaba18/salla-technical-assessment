@@ -14,5 +14,5 @@ class Products extends Model
      *
      * @var array
      */
-    protected $fillable = ['id', 'name', 'sku', 'product_status_id', 'variations', 'price', 'product_currency_id', 'incomplete_import'];
+    protected $fillable = ['id', 'name', 'sku', 'status', 'variations', 'price', 'currency', 'incomplete_import'];
 }
