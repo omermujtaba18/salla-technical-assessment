@@ -16,30 +16,15 @@
 
 ### Testing synchronization with external services
 
-To run the scheduler and execute the `php artisan app:sync-products {service}` command daily at 12am, use:
+Run `php artisan schedule:work` this would run the scheduler and execute the `php artisan app:sync-products ServiceA` command daily at 12am
 
-    php artisan schedule:work
+If you would like to test the app:sync-products standalone you can run `php artisan app:sync-products ServiceA` directly
 
-To test the app:sync-products command standalone, use:
+### Testing import:products without parallelization
 
-    php artisan app:sync-products ServiceA
+1. Run `php artisan import:products products.csv`, you can optionally pass maxRowsToProcess as well
 
-### Testing import:products Without Parallelization
+### Testing import:products with parallelization enabled (to be implemented)
 
-To run the import:products command without parallelization:
-
-    php artisan import:products products.csv --parallelizationEnabled=false
-
-You can optionally pass the --maxRowsToProcess argument as well.
-
-### Testing import:products With Parallelization Enabled (To Be Implemented)
-
-1. Start workers
-
-    php artisan queue:work
-
-2. Run import:products Command
-
-    php artisan import:products products.csv
-
-    You can optionally pass the --maxRowsToProcess argument as well.
+1. Start workers with `php artisan queue:work`
+2. Run `php artisan import:products products.csv` you can optionally pass maxRowsToProcess as well
