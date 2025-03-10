@@ -2,15 +2,23 @@
 
 namespace App\Console\Commands;
 
+use App\Jobs\ImportProductsFromCSV;
+use App\Models\Products;
 use Illuminate\Console\Command;
-use PDO;
+use Illuminate\Bus\Batch;
+use Illuminate\Http\File;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 class ImportProducts extends Command
 {
     /**
      * @var string
      */
-    protected $signature = 'import:products';
+    protected $signature = 'import:products {file : The CSV file to import} {--batchSize=200 : How many rows to process in a batch}';
 
     /**
      * @var string
@@ -18,45 +26,35 @@ class ImportProducts extends Command
     protected $description = 'Imports products into database';
 
     /**
-     * @return void
-     */
-    public function __construct()
-    {
-        parent::__construct();
-    }
-
-    /**
      * @return mixed
      */
     public function handle()
     {
-        // Rename from products1.csv into products2.csv to import a file with slightly different data
-        $contents = file_get_contents('products.csv');
-        $lines = explode("\n", $contents);
+        // Get the file as an input 
+        $file = $this->argument('file');
 
-        $i = 0;
-
-        foreach ($lines as $line) {
-
-            $fields = explode(';', $line);
-
-            $pdo = new PDO('mysql:dbname=coding_challenge;host=172.0.0.1;port=3306', 'root', 'secret');
-
-            $query = $pdo->prepare("SELECT COUNT(*) AS c from products WHERE id=?");
-            $result = $query->execute([$fields[0]]);
-            if($query->rowCount()) {
-                $pdo->query('DELETE FROM products WHERE id = "' . $fields[0] . '"');
-                print('Deleted existed product to be updated.');
-            }
-
-            $query = $pdo->prepare('INSERT INTO products (id, name, sku,status,variations, price, currency) VALUES (?, ?, ?, ? , ? , ?, ?)');
-            $result = $query->execute([$fields[0], ($fields[4] ?? ''), ($fields[5] ?? ''), ($fields[6] ?? ''), ($fields[9] ?? ''), ($fields[10] ?? '') ]);
-
-            // TODO: Soft delete no longer exist products from the database.
-
-            $i++;
+        // Validate the file
+        if (!file_exists($file)) {
+            $this->error("File not found: {$file}");
+            return;
         }
 
-        die('Updated ' . $i . ' products.');
+        $storedFilePath = Storage::putFile('imports', new File($file));
+        $batchSize = $this->option('batchSize');
+
+        Bus::batch(new ImportProductsFromCSV($storedFilePath, $batchSize))->then(function (Batch $batch) use ($storedFilePath) {
+            $productIds = Cache::get("productsIds:{$storedFilePath}");
+
+            // Delete products that are not in the imported csv and set their deletion reason to synchronization 
+            if (is_array($productIds) && count($productIds) > 0) {
+                Products::whereNotIn('id', $productIds)->update(['deletion_reason' => 'synchronization', 'deleted_at' => now()->toDateTimeString()]);
+                Cache::forget("productsIds:{$storedFilePath}");
+            }
+
+            $executionTime = $batch->finishedAt->diff($batch->createdAt)->format('%H:%I:%S');
+            Log::info("CSV import successful. Execution time: {$executionTime}", ['totalJobs' => $batch->totalJobs]);
+        })->catch(function (Batch $batch, Throwable $e) {
+            Log::error('CSV import failed', ['error' => $e, 'batch' => $batch, 'totalJobs' => $batch->totalJobs, 'failedJobs' => $batch->failedJobs]);
+        })->name('import:products:batch')->dispatch();
     }
 }
