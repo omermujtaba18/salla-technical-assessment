@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Products extends Model
@@ -28,15 +27,5 @@ class Products extends Model
     public function variation_types(): HasMany
     {
         return $this->hasMany(ProductVariationsTypes::class, 'product_id');
-    }
-
-    public function status(): HasOne
-    {
-        return $this->hasOne(ProductStatus::class, 'product_id');
-    }
-
-    public function currency(): HasOne
-    {
-        return $this->hasOne(ProductCurrency::class, 'product_id');
     }
 }
