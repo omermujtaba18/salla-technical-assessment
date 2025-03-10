@@ -131,15 +131,20 @@ class ImportProducts extends Command
                     $product->incomplete_import = true;
                     $product->save();
                 } else {
-                    $product->variation_types()->delete();
+                    $product->variations()->delete();
+
                     foreach ($decodedVariations as $variation) {
-                        if (isset($variation['name'])) {
-                            $productVariationType = $product->variation_types()->create(['variation_type_name' => $variation['name']]);
-                            $values = array_filter(array_map('trim', explode(",", $variation['value'])));
-                            if (isset($values) && is_array($values)) {
-                                foreach ($values as $value) {
-                                    $productVariationType->product_variations()->create(['product_variation_name' => $value]);
-                                }
+                        $isColor = $variation['name'] === 'color' || $variation['name'] === 'الحجم';
+                        $isSize = $variation['name'] === 'size' || $variation['name'] === 'مقاس';
+                        $values = array_filter(array_map('trim', explode(",", $variation['value'])));
+
+                        if ($isColor || $isSize) {
+                            foreach ($values as $value) {
+                                $productVariation = [
+                                    'color' => $isColor ? $value : null,
+                                    'size' => $isSize ? $value : null,
+                                ];
+                                $product->variations()->create($productVariation);
                             }
                         }
                     }
